@@ -1,11 +1,8 @@
 name: Actualizar datos embalses
 
 on:
-  # Ejecutar cada martes a las 10:00 (hora España = 09:00 UTC en invierno)
   schedule:
     - cron: '0 9 * * 2'
-
-  # También permite ejecutarlo manualmente desde GitHub
   workflow_dispatch:
 
 jobs:
@@ -13,38 +10,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Descargar el código del repositorio
       - name: Descargar repositorio
         uses: actions/checkout@v4
 
-      # 2. Instalar Python
       - name: Instalar Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. Instalar dependencias
       - name: Instalar dependencias
-        run: |
-          pip install requests pandas openpyxl beautifulsoup4 flask flask-cors
+        run: pip install requests pandas openpyxl beautifulsoup4
 
-      # 4. Ejecutar el script de descarga
-      - name: Instalar mdbtools (lector de .mdb en Linux)
+      - name: Instalar mdbtools
         run: sudo apt-get install -y mdbtools
 
-      - name: Ejecutar fetch_embalses.py
+      - name: Descargar datos del MITECO
         run: python fetch_embalses_linux.py
 
-      # --- ¡NUEVO PASO AÑADIDO! ---
-      # 4.5 Extraer los datos de SQLite y convertirlos a JSON
-      - name: Exportar base de datos a JSON estáticos
-        run: python exportar_json.py
+      - name: Generar ficheros JSON estáticos
+        run: python generar_json.py
 
-      # 5. Hacer commit del embalses.db Y LOS JSON actualizados
-      - name: Guardar cambios en el repositorio
+      - name: Hacer commit de los datos actualizados
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add embalses.db *.json embalses/
+          git add embalses.db datos/
           git diff --staged --quiet || git commit -m "Datos actualizados: $(date '+%Y-%m-%d')"
           git push
