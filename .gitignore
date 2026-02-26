@@ -1,5 +1,6 @@
-# Base de datos local (no subir a GitHub, pesa mucho)
-embalses.db
+# NO ignorar embalses.db — GitHub Actions lo actualiza automáticamente
+# embalses.db
+
 fetch.log
 
 # Python
