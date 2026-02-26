@@ -1,0 +1,14 @@
+# Base de datos local (no subir a GitHub, pesa mucho)
+embalses.db
+fetch.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.env
+
+# Windows
+Thumbs.db
+desktop.ini
