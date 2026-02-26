@@ -76,14 +76,16 @@ def limpiar_numero(valor):
 
 def formato_embalse(row: dict) -> dict:
     """Convierte una fila raw de la BD a un dict limpio para la API."""
-    volumen = limpiar_numero(row.get("volumen_hm3"))
-    agua    = limpiar_numero(row.get("AGUA_ACTUAL"))
+    total  = limpiar_numero(row.get("AGUA_TOTAL"))
+    actual = limpiar_numero(row.get("AGUA_ACTUAL"))
+    pct    = round((actual / total * 100), 1) if total and actual and total > 0 else None
     return {
         "nombre":          row.get("EMBALSE_NOMBRE"),
         "cuenca":          row.get("AMBITO_NOMBRE"),
         "fecha":           row.get("fecha"),
-        "volumen_hm3":     volumen,
-        "agua_actual_hm3": agua,
+        "capacidad_hm3":   total,
+        "volumen_hm3":     actual,
+        "porcentaje":      pct,
         "electrico":       bool(row.get("ELECTRICO_FLAG")),
     }
 
