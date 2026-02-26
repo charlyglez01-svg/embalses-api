@@ -632,7 +632,6 @@
 </head>
 <body>
 
-<!-- HEADER -->
 <header>
   <div class="logo">
     <div class="logo-icon">💧</div>
@@ -647,10 +646,8 @@
   </div>
 </header>
 
-<!-- MAIN -->
 <main>
 
-  <!-- STATS -->
   <div class="stats-grid" id="stats-grid">
     <div class="stat-card">
       <div class="stat-label">Total embalses</div>
@@ -670,7 +667,6 @@
     </div>
   </div>
 
-  <!-- CONTROLES -->
   <div class="controls">
     <div class="search-wrap">
       <input type="text" id="search" placeholder="Buscar embalse...">
@@ -681,7 +677,6 @@
     <button class="btn" onclick="resetFiltros()">Limpiar</button>
   </div>
 
-  <!-- TABLA -->
   <div class="table-wrap">
     <div class="table-header">
       <span class="table-title">Inventario de embalses</span>
@@ -692,12 +687,10 @@
     </div>
   </div>
 
-  <!-- PAGINACIÓN -->
   <div class="pagination" id="pagination"></div>
 
 </main>
 
-<!-- MODAL DETALLE -->
 <div class="modal-overlay" id="modal-overlay" onclick="cerrarModal(event)">
   <div class="modal" id="modal">
     <div class="modal-top">
@@ -718,7 +711,10 @@
 </div>
 
 <script>
-const API = 'http://localhost:5000';
+// ──────────────────────────────────────────────
+// NUEVA URL BASE APUNTANDO A TU GITHUB
+// ──────────────────────────────────────────────
+const GITHUB_RAW_URL = 'https://raw.githubusercontent.com/charlyglez01-svg/embalses-api/main/datos';
 
 let allData = [];
 let filteredData = [];
@@ -738,24 +734,25 @@ async function init() {
 // ── RESUMEN ───────────────────────────────────
 async function cargarResumen() {
   try {
-    const r = await fetch(`${API}/api/resumen`);
+    const r = await fetch(`${GITHUB_RAW_URL}/resumen.json?t=${Date.now()}`);
     const d = await r.json();
     document.getElementById('s-total').textContent = d.total_embalses ?? '—';
     document.getElementById('s-cuencas').textContent = d.total_cuencas ?? '—';
     document.getElementById('s-fecha').textContent = d.ultima_fecha ? formatFecha(d.ultima_fecha) : '—';
     document.getElementById('last-update').textContent = d.ultima_fecha ? `Datos: ${d.ultima_fecha}` : '';
-    document.getElementById('status-badge').textContent = 'En línea';
+    document.getElementById('status-badge').textContent = 'Conectado a GitHub';
     document.getElementById('status-badge').className = 'badge badge-cyan';
   } catch(e) {
-    document.getElementById('status-badge').textContent = 'API offline';
+    document.getElementById('status-badge').textContent = 'Esperando datos...';
     document.getElementById('status-badge').className = 'badge badge-blue';
+    console.warn("No se encontró resumen.json en GitHub (todavía)");
   }
 }
 
 // ── CUENCAS ───────────────────────────────────
 async function cargarCuencas() {
   try {
-    const r = await fetch(`${API}/api/cuencas`);
+    const r = await fetch(`${GITHUB_RAW_URL}/cuencas.json?t=${Date.now()}`);
     const cuencas = await r.json();
     const sel = document.getElementById('cuenca-select');
     cuencas.forEach(c => {
@@ -768,24 +765,23 @@ async function cargarCuencas() {
       currentPage = 1;
       aplicarFiltros();
     });
-  } catch(e) {}
+  } catch(e) {
+    console.warn("No se encontró cuencas.json en GitHub");
+  }
 }
 
-// ── EMBALSES (todos de una vez para filtrar client-side) ──
+// ── EMBALSES ──────────────────────────────────
 async function cargarEmbalses() {
   const container = document.getElementById('table-container');
-  container.innerHTML = '<div class="loading">Cargando datos</div>';
+  container.innerHTML = '<div class="loading">Descargando datos desde GitHub</div>';
   try {
-    // Cargar todas las páginas
-    const first = await fetch(`${API}/api/embalses?per_page=200`).then(r=>r.json());
-    allData = first.data || [];
-    const pages = first.pages || 1;
-    const promises = [];
-    for (let p = 2; p <= pages; p++) {
-      promises.push(fetch(`${API}/api/embalses?per_page=200&page=${p}`).then(r=>r.json()));
-    }
-    const rest = await Promise.all(promises);
-    rest.forEach(r => { allData = allData.concat(r.data || []); });
+    // Al ser estático, bajamos el JSON completo de golpe, sin paginación en la URL
+    const r = await fetch(`${GITHUB_RAW_URL}/embalses.json?t=${Date.now()}`);
+    const data = await r.json();
+    
+    // Si tu JSON guarda los datos dentro de un objeto "data", lo extraemos. 
+    // Si es un array directo, usamos data.
+    allData = data.data || data || []; 
 
     // Contar eléctricos
     const elec = allData.filter(e => e.electrico).length;
@@ -796,9 +792,8 @@ async function cargarEmbalses() {
   } catch(e) {
     container.innerHTML = `
       <div class="error-msg">
-        <strong>No se puede conectar con la API</strong>
-        Asegúrate de que la API está corriendo en tu ordenador.
-        <code>python api.py</code>
+        <strong>No se encuentran los datos</strong>
+        Comprueba que tu GitHub Action está guardando el archivo <code>embalses.json</code> correctamente en la raíz de tu repositorio.
       </div>`;
   }
 }
@@ -947,9 +942,16 @@ async function abrirModal(nombreEnc) {
   document.getElementById('m-stats').innerHTML = '<div style="color:var(--text-dim);font-size:0.75rem">Cargando...</div>';
 
   try {
-    const r = await fetch(`${API}/api/embalses/${encodeURIComponent(nombre)}`);
+    // Si tu Action no guarda archivos individuales para cada embalse, esto dará error. 
+    // En ese caso, la info se puede sacar de la variable "allData" que ya descargamos.
+    // Por defecto asumo que creas una carpeta "embalses" con el json de cada uno:
+    const r = await fetch(`${GITHUB_RAW_URL}/embalses/${nombre.replace(///g,'_').replace(/ /g,'_')}.json`);
+    
+    // Si la opción de arriba falla, puedes comentar esa línea y usar esta:
+    // const d = allData.find(e => e.nombre === nombre) || {};
+    
     const d = await r.json();
-    const u = d.ultimo_dato || {};
+    const u = d.ultimo_dato || d || {};
 
     document.getElementById('m-cuenca').textContent = d.cuenca ?? '—';
 
@@ -957,7 +959,7 @@ async function abrirModal(nombreEnc) {
       { label: 'Volumen hm³',      val: u.volumen_hm3 ?? '—',       color: 'var(--cyan)' },
       { label: 'Agua actual hm³',  val: u.agua_actual_hm3 ?? '—',   color: 'var(--blue)' },
       { label: 'Fecha dato',       val: u.fecha ? formatFecha(u.fecha) : '—', color: 'var(--yellow)', size: '1rem' },
-      { label: 'Uso eléctrico',    val: d.ultimo_dato?.electrico ? 'Sí ⚡' : 'No', color: d.ultimo_dato?.electrico ? 'var(--yellow)' : 'var(--text-dim)' },
+      { label: 'Uso eléctrico',    val: u.electrico ? 'Sí ⚡' : 'No', color: u.electrico ? 'var(--yellow)' : 'var(--text-dim)' },
     ];
 
     document.getElementById('m-stats').innerHTML = stats.map(s => `
@@ -970,7 +972,7 @@ async function abrirModal(nombreEnc) {
     dibujarSparkline(d.historico || []);
 
   } catch(e) {
-    document.getElementById('m-stats').innerHTML = '<div style="color:var(--red);font-size:0.75rem">Error al cargar detalle</div>';
+    document.getElementById('m-stats').innerHTML = '<div style="color:var(--red);font-size:0.75rem">No hay detalles adicionales en GitHub para este embalse</div>';
   }
 }
 
@@ -1012,7 +1014,7 @@ function dibujarSparkline(historico) {
   const range = maxV - minV || 1;
 
   const xScale = (W - pad.left - pad.right) / (datos.length - 1);
-  const yScale = (H - pad.top - pad.bottom) / range;
+  const yScale = (H - pad.bottom - pad.top) / range;
 
   const toX = i  => pad.left + i * xScale;
   const toY = v  => H - pad.bottom - (v - minV) * yScale;
