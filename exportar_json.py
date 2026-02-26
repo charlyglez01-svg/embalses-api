@@ -15,16 +15,19 @@ def limpiar_numero(valor):
     except Exception:
         return None
 
-def formato_embalse(row):
-    volumen = limpiar_numero(row["volumen_hm3"])
-    agua    = limpiar_numero(row["AGUA_ACTUAL"])
+def formato_embalse(row_obj):
+    # Convertimos la fila a diccionario, igual que hacía tu api.py
+    row = dict(row_obj) 
+    
+    volumen = limpiar_numero(row.get("volumen_hm3"))
+    agua    = limpiar_numero(row.get("AGUA_ACTUAL"))
     return {
-        "nombre":          row["EMBALSE_NOMBRE"],
-        "cuenca":          row["AMBITO_NOMBRE"],
-        "fecha":           row["fecha"],
+        "nombre":          row.get("EMBALSE_NOMBRE"),
+        "cuenca":          row.get("AMBITO_NOMBRE"),
+        "fecha":           row.get("fecha"),
         "volumen_hm3":     volumen,
         "agua_actual_hm3": agua,
-        "electrico":       bool(row["ELECTRICO_FLAG"]),
+        "electrico":       bool(row.get("ELECTRICO_FLAG")),
     }
 
 # ─────────────────────────────────────────────
@@ -103,4 +106,5 @@ def main():
     conn.close()
 
 if __name__ == "__main__":
+
     main()
