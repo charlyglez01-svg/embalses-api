@@ -790,7 +790,8 @@ async function cargarEmbalses() {
     container.innerHTML = `
       <div class="error-msg">
         <strong>No se puede conectar con la API</strong>
-        No se pudieron cargar los datos de GitHub.
+        Asegúrate de que la API está corriendo en tu ordenador.
+        <code>python api.py</code>
       </div>`;
   }
 }
@@ -858,8 +859,8 @@ function renderTabla() {
   const cols = [
     { key: 'nombre',          label: 'Embalse' },
     { key: 'cuenca',          label: 'Cuenca' },
-    { key: 'volumen_hm3',     label: 'Volumen hm³' },
-    { key: 'agua_actual_hm3', label: 'Agua actual hm³' },
+    { key: 'capacidad_hm3',   label: 'Capacidad hm³' },
+    { key: 'volumen_hm3',     label: 'Agua actual hm³' },
     { key: '_llenado',        label: 'Llenado' },
     { key: 'electrico',       label: 'Uso' },
   ];
@@ -873,9 +874,9 @@ function renderTabla() {
   html += `</tr></thead><tbody>`;
 
   slice.forEach((e, i) => {
-    const vol  = e.volumen_hm3 ?? e.agua_actual_hm3;
-    const agua = e.agua_actual_hm3;
-    const pct  = vol && agua ? Math.min(100, Math.round((agua / vol) * 100)) : null;
+    const vol  = e.capacidad_hm3;
+    const agua = e.volumen_hm3;
+    const pct  = e.porcentaje !== null && e.porcentaje !== undefined ? Math.min(100, Math.round(e.porcentaje)) : null;
     const fillClass = pct === null ? 'fill-na' : pct >= 60 ? 'fill-high' : pct >= 30 ? 'fill-mid' : 'fill-low';
     const pctText = pct !== null ? pct + '%' : '—';
     const barW = pct !== null ? pct : 0;
@@ -947,8 +948,9 @@ async function abrirModal(nombreEnc) {
     document.getElementById('m-cuenca').textContent = d.cuenca ?? '—';
 
     const stats = [
-      { label: 'Volumen hm³',      val: u.volumen_hm3 ?? '—',       color: 'var(--cyan)' },
-      { label: 'Agua actual hm³',  val: u.agua_actual_hm3 ?? '—',   color: 'var(--blue)' },
+      { label: 'Capacidad hm³',    val: u.capacidad_hm3 ?? '—',     color: 'var(--cyan)' },
+      { label: 'Agua actual hm³',  val: u.volumen_hm3 ?? '—',       color: 'var(--blue)' },
+      { label: 'Llenado',          val: u.porcentaje != null ? u.porcentaje + '%' : '—', color: u.porcentaje >= 60 ? 'var(--green)' : u.porcentaje >= 30 ? 'var(--yellow)' : 'var(--red)' },
       { label: 'Fecha dato',       val: u.fecha ? formatFecha(u.fecha) : '—', color: 'var(--yellow)', size: '1rem' },
       { label: 'Uso eléctrico',    val: d.ultimo_dato?.electrico ? 'Sí ⚡' : 'No', color: d.ultimo_dato?.electrico ? 'var(--yellow)' : 'var(--text-dim)' },
     ];
