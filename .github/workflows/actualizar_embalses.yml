@@ -23,24 +23,28 @@ jobs:
         with:
           python-version: '3.11'
 
-      # 3. Instalar dependencias (sin pyodbc, no hace falta en Linux)
+      # 3. Instalar dependencias
       - name: Instalar dependencias
         run: |
           pip install requests pandas openpyxl beautifulsoup4 flask flask-cors
 
       # 4. Ejecutar el script de descarga
-      #    En Linux el .mdb se lee diferente, usamos mdbtools
       - name: Instalar mdbtools (lector de .mdb en Linux)
         run: sudo apt-get install -y mdbtools
 
       - name: Ejecutar fetch_embalses.py
         run: python fetch_embalses_linux.py
 
-      # 5. Hacer commit del embalses.db actualizado al repositorio
-      - name: Guardar embalses.db en el repositorio
+      # --- ¡NUEVO PASO AÑADIDO! ---
+      # 4.5 Extraer los datos de SQLite y convertirlos a JSON
+      - name: Exportar base de datos a JSON estáticos
+        run: python exportar_json.py
+
+      # 5. Hacer commit del embalses.db Y LOS JSON actualizados
+      - name: Guardar cambios en el repositorio
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add embalses.db
+          git add embalses.db *.json embalses/
           git diff --staged --quiet || git commit -m "Datos actualizados: $(date '+%Y-%m-%d')"
           git push
