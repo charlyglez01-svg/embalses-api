@@ -2,7 +2,7 @@ name: Actualizar datos embalses
 
 on:
   schedule:
-    - cron: '14 19 * * 3'
+    - cron: '24 20 * * 3'
   workflow_dispatch:
 
 jobs:
